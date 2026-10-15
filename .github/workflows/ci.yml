@@ -1,0 +1,30 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 15
+    env:
+      RUN_UI_TESTS: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Public-release checks
+        run: python3 Tests/test_release.py
+      - name: Headless app tests
+        run: swift test
+      - name: Protocol and loopback integration tests
+        working-directory: RemoteKit
+        run: swift test --build-system native
+      - name: Build and verify native app
+        run: |
+          python3 tools/build.py
+          python3 Tests/verify_bundle.py

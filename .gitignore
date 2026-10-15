@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+dist/
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.env.*
+connections.json
+*.token
+*.dmg
+*.dSYM/

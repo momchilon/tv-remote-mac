@@ -1,0 +1,43 @@
+name: Request TV support
+description: Request support for any TV brand or model.
+title: "[TV support] Brand and model"
+body:
+  - type: markdown
+    attributes:
+      value: "v0.1 supports Samsung only. Requests for any TV brand/model are welcome. Do not share tokens, serial numbers, MAC addresses, local IP addresses, or private network details."
+  - type: input
+    id: brand
+    attributes:
+      label: TV brand
+      placeholder: "LG, Sony, Philips, TCL, Hisense, Roku, Samsung, or any other brand"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Exact TV model
+      description: "Model name only, not a serial number."
+    validations:
+      required: true
+  - type: input
+    id: year-os
+    attributes:
+      label: Approximate model year and TV OS
+      placeholder: "If known, e.g. webOS or Android/Google TV"
+  - type: textarea
+    id: controls
+    attributes:
+      label: Which controls would you like?
+      placeholder: "Navigation, volume, power, input selection, or other controls"
+    validations:
+      required: true
+  - type: dropdown
+    id: testing
+    attributes:
+      label: Can you help test on this TV?
+      options:
+        - "Yes"
+        - "Maybe"
+        - "No"
+    validations:
+      required: true
