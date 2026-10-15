@@ -7,8 +7,18 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 class ReleasePolicyTests(unittest.TestCase):
-    def test_version_is_initial_public_release(self):
-        self.assertEqual((ROOT / 'VERSION').read_text().strip(), '0.1')
+    def test_version_is_v02(self):
+        self.assertEqual((ROOT / 'VERSION').read_text().strip(), '0.2')
+
+    def test_release_docs_match_version_and_features(self):
+        readme = (ROOT / 'README.md').read_text()
+        self.assertIn('releases/download/v0.2/TV-Remote-v0.2-arm64.dmg', readme)
+        self.assertNotIn('(unreleased)', readme)
+        notes = ROOT / 'docs' / 'releases' / 'v0.2.md'
+        self.assertTrue(notes.is_file())
+        text = notes.read_text()
+        for required in ['Find TVs', 'Multiple remotes', 'Samsung', 'Apple silicon', 'not Apple-notarized', 'SHA256SUMS']:
+            self.assertIn(required, text)
 
     def test_ui_suites_are_explicitly_opt_in(self):
         for name in ['MenuBarControllerTests.swift', 'PanelViewTests.swift']:

@@ -4,9 +4,9 @@ A tiny, free, open-source TV remote that lives in your Mac’s menu bar.
 Click the remote-shaped icon and the controls appear directly underneath it.
 Click again, click outside, or press Escape to close. No Dock icon, hover activation, account, ads, or subscription.
 
-**v0.1 supports Samsung only.** Requests for **any TV brand or model** are welcome—see [Request TV support](#request-tv-support).
+**v0.2 supports Samsung only.** Requests for **any TV brand or model** are welcome—see [Request TV support](#request-tv-support).
 
-[Download v0.1 for Apple silicon](https://github.com/momchilon/tv-remote-mac/releases/download/v0.1/TV-Remote-v0.1-arm64.dmg) · [All releases](https://github.com/momchilon/tv-remote-mac/releases) · [Request TV support](https://github.com/momchilon/tv-remote-mac/issues/new?template=tv-support.yml)
+[Download v0.2 for Apple silicon](https://github.com/momchilon/tv-remote-mac/releases/download/v0.2/TV-Remote-v0.2-arm64.dmg) · [All releases](https://github.com/momchilon/tv-remote-mac/releases) · [Request TV support](https://github.com/momchilon/tv-remote-mac/issues/new?template=tv-support.yml)
 
 <img src="docs/remote.png" width="300" alt="Interface preview: a minimal black remote with navigation, volume, Back, Home, input and power controls">
 
@@ -16,7 +16,8 @@ Click again, click outside, or press Escape to close. No Dock icon, hover activa
 2. Open it and drag **Notch Remote.app** into **Applications**.
 3. Eject the DMG and open the app from Applications.
 4. Click the remote-shaped icon in the menu bar.
-5. Enter your Samsung TV’s local IPv4 address, click Connect, and choose **Allow** on the TV.
+5. Open the gear, click **Find TVs**, select a Samsung TV and give it a name. You can also enter its local IPv4 address manually.
+6. Click **Save & Connect**, and choose **Allow** on the TV if asked. Allow local-network access in macOS when prompted.
 
 The Mac and TV must be on the same reachable local network. The app remembers the approved pairing on that Mac. No pairing tokens or personal TV settings are included in the download.
 
@@ -24,7 +25,7 @@ The app is still named **Notch Remote** internally for compatibility with early 
 
 ### Requirements and first launch
 
-- The downloadable v0.1 DMG is for **Apple silicon Macs**, with a minimum deployment target of **macOS 13**. Not every macOS version has been physically tested.
+- The downloadable v0.2 DMG is for **Apple silicon Macs**, with a minimum deployment target of **macOS 13**. Not every macOS version has been physically tested.
 - A compatible **Samsung smart TV** offering its local-network remote interface on port 8002. Support varies by model and firmware; not every Samsung TV has been tested.
 - The release is **ad-hoc signed, not Apple-notarized**. macOS may require manual approval in Privacy & Security when opening a downloaded build. You can also inspect the source and build it yourself.
 - It needs local-network access—not Accessibility, screen recording, or desktop-control permission.
@@ -39,7 +40,7 @@ The app is still named **Notch Remote** internally for compatibility with early 
 
 The gear opens connection settings. Right-click the menu-bar icon for connection settings or Quit. The app does not add itself to login items.
 
-### New in source builds (unreleased)
+### New in v0.2: discovery and multiple remotes
 
 - **Find TVs:** open the gear, click **Find TVs**, then select a discovered Samsung TV. Its name and IP fill the form; discovery does not pair with it or send remote commands. Click **Save & Connect** when ready.
 - **Multiple remotes:** give each TV a name (for example, Living room or Bedroom). Use the TV-name menu above the controls to switch between saved TVs, or choose **Add TV** to set up another one.
@@ -50,14 +51,14 @@ Discovery uses local IPv4 SSDP and a read-only Samsung device-information reques
 
 TV names and device information discovered over HTTP are untrusted hints, not authentication. Control still uses the existing pinned TLS connection on port 8002. If discovery provides a valid MAC address, it is remembered only after a successful connection to that TV, enabling best-effort wake where supported.
 
-These features are not included in the downloadable v0.1 release above; build from source to try them.
+Updating from v0.1 preserves your existing pairing and adds that TV to the saved-remotes list. See the [v0.2 release notes](docs/releases/v0.2.md).
 
 ## Current limits
 
-- **Samsung only in v0.1.** There is no LG, Sony, Philips, TCL, Hisense, Roku or Android/Google TV backend yet.
-- The v0.1 download requires manual IP entry. Source builds also offer the **Find TVs** scan described above.
+- **Samsung only in v0.2.** There is no LG, Sony, Philips, TCL, Hisense, Roku or Android/Google TV backend yet.
+- Discovery requires a responsive TV on a reachable local network. If multicast is blocked or a TV is asleep, use manual IP entry.
 - No channel list, app launcher, screen mirroring, or cloud control.
-- Waking the TV is best-effort and requires a known MAC address plus working standby networking. The v0.1 download has no automatic MAC discovery or MAC-entry field. Source builds can remember a MAC reported during discovery, but not every TV provides one. Turning an already-connected TV off is supported.
+- Waking the TV is best-effort and requires a known MAC address plus working standby networking. The app can remember a MAC reported during discovery, but not every TV provides one. Turning an already-connected TV off is supported.
 - A successful WebSocket write is not an acknowledgment that the TV acted on a key. Key behavior depends on the TV and its current screen.
 
 ## Request TV support
