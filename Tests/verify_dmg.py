@@ -33,9 +33,12 @@ class DiskImageTests(unittest.TestCase):
             self.assertIn('Applications', notes)
             self.assertIn('Apple silicon', notes)
             self.assertIn('not notarized', notes)
-            self.assertIn('v0.2', notes)
+            self.assertIn('v0.3', notes)
             self.assertIn('Find TVs', notes)
             self.assertIn('Save & Connect', notes)
+            self.assertIn('Full', notes)
+            self.assertIn('Compact', notes)
+            self.assertIn('More controls', notes)
         finally:
             subprocess.run(['hdiutil', 'detach', str(volume)], check=True, stdout=subprocess.DEVNULL)
 

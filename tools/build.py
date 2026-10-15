@@ -27,7 +27,7 @@ info = {
     'CFBundleExecutable': 'NotchRemote',
     'CFBundlePackageType': 'APPL',
     'CFBundleShortVersionString': (root / 'VERSION').read_text().strip(),
-    'CFBundleVersion': '2',
+    'CFBundleVersion': '3',
     'LSMinimumSystemVersion': '13.0',
     'LSUIElement': True,
     'LSMultipleInstancesProhibited': True,

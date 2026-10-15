@@ -10,7 +10,7 @@ let package = Package(
     ],
     dependencies: [.package(path: "RemoteKit")],
     targets: [
-        .target(name: "NotchUI"),
+        .target(name: "NotchUI", dependencies: [.product(name: "RemoteKit", package: "RemoteKit")]),
         .executableTarget(name: "NotchRemote", dependencies: ["NotchUI", .product(name: "RemoteKit", package: "RemoteKit")]),
         .testTarget(name: "NotchUITests", dependencies: ["NotchUI"])
     ]

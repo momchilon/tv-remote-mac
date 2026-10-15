@@ -1,12 +1,9 @@
 import Foundation
 import Combine
+import RemoteKit
 
-public enum PanelCommand: String, CaseIterable {
-    case up = "KEY_UP", down = "KEY_DOWN", left = "KEY_LEFT", right = "KEY_RIGHT"
-    case enter = "KEY_ENTER", back = "KEY_RETURN", home = "KEY_HOME"
-    case volumeUp = "KEY_VOLUP", volumeDown = "KEY_VOLDOWN", mute = "KEY_MUTE"
-    case source = "KEY_SOURCE", power = "KEY_POWER"
-}
+// A single allowlist from the UI through to the wire; no silently dropped mappings.
+public typealias PanelCommand = RemoteKey
 
 public enum PanelConnection: Equatable {
     case disconnected, connecting, approval, ready, failed(String)
@@ -25,6 +22,9 @@ public struct PanelTV: Equatable, Identifiable, Sendable {
 @MainActor
 public final class PanelModel: ObservableObject {
     @Published public var expanded = false
+    @Published public var fullRemote = false
+    @Published public var showingMoreControls = false
+    @Published public var controlQuery = ""
     @Published public var settings = false
     @Published public var confirmingPower = false
     @Published public var host = ""
@@ -52,8 +52,11 @@ public final class PanelModel: ObservableObject {
     public var onQuit: (() -> Void)?
 
     public init() {}
-    public static func height(settings: Bool) -> Double { settings ? 480 : 250 }
-    public var panelHeight: Double { Self.height(settings: settings) }
+    public static func height(settings: Bool, fullRemote: Bool = false) -> Double { settings ? 480 : (fullRemote ? 640 : 250) }
+    public static func width(settings: Bool, fullRemote: Bool = false) -> Double { !settings && fullRemote ? 520 : 300 }
+    public var panelWidth: Double { Self.width(settings: settings, fullRemote: fullRemote) }
+    public var panelHeight: Double { Self.height(settings: settings, fullRemote: fullRemote) }
+    public func toggleFullRemote() { controlQuery = ""; showingMoreControls = false; fullRemote.toggle() }
     public var ready: Bool { connection == .ready }
     public var busy: Bool { connection == .connecting || connection == .approval }
     public var keepsOpen: Bool { settings || confirmingPower || busy }
@@ -179,6 +182,6 @@ public final class PanelModel: ObservableObject {
     public func close() {
         cancelDiscovery()
         if settings { leaveSettings() }
-        confirmingPower = false; settings = false; expanded = false; notice = ""
+        confirmingPower = false; settings = false; expanded = false; notice = ""; controlQuery = ""
     }
 }

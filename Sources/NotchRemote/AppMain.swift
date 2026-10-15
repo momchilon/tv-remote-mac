@@ -87,8 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return devices.map { PanelTV(host: $0.host, name: $0.name, model: $0.model) }
         }
         model.onCommand = { [weak self] command in
-            guard let key = RemoteKey(rawValue: command.rawValue) else { return }
-            self?.remote.send(key)
+            self?.remote.send(command)
         }
         model.onConnect = { [weak self] host in
             guard let self else { return }

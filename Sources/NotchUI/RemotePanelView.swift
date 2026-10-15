@@ -50,27 +50,41 @@ public struct RemotePanelView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityLabel("Switch remote")
                 Spacer()
+                Button { model.toggleFullRemote() } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: model.fullRemote ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        Text(model.fullRemote ? "Compact" : "Full")
+                    }
+                    .font(.system(size: 10, weight: .medium)).padding(.horizontal, 8).frame(height: 27)
+                }
+                .buttonStyle(RemoteButtonStyle(restingOpacity: 0.07, radius: 8))
+                .help(model.fullRemote ? "Return to compact remote" : "Expand full remote")
+                .accessibilityLabel(model.fullRemote ? "Collapse to compact remote" : "Expand full remote")
                 icon("gearshape", label: "Connection settings", size: 27) { model.showSettings() }
                 icon("power", label: model.ready ? "Turn off TV" : "Wake TV", size: 27) { model.requestPower() }
             }
             .frame(height: 27)
-            Spacer(minLength: 8)
-            if model.ready {
-                HStack(spacing: 30) {
-                    directionPad
-                    volume
-                }
-                Spacer(minLength: 9)
-                HStack(spacing: 14) {
-                    remoteKey("arrow.uturn.backward", label: "Back", key: .back)
-                    remoteKey("house", label: "Home", key: .home)
-                    remoteKey("rectangle.on.rectangle", label: "Input source", key: .source)
-                }
-                .frame(height: 32)
+            if model.fullRemote {
+                ExpandedRemoteView(model: model).padding(.top, 16)
             } else {
-                connectionState
+                Spacer(minLength: 8)
+                if model.ready {
+                    HStack(spacing: 30) {
+                        directionPad
+                        volume
+                    }
+                    Spacer(minLength: 9)
+                    HStack(spacing: 14) {
+                        remoteKey("arrow.uturn.backward", label: "Back", key: .back)
+                        remoteKey("house", label: "Home", key: .home)
+                        remoteKey("rectangle.on.rectangle", label: "Input source", key: .source)
+                    }
+                    .frame(height: 32)
+                } else {
+                    connectionState
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
@@ -78,19 +92,7 @@ public struct RemotePanelView: View {
     }
 
     private var directionPad: some View {
-        ZStack {
-            Circle().fill(.white.opacity(0.065))
-            icon("chevron.up", label: "Up", size: 36) { model.send(.up) }.offset(y: -43)
-            icon("chevron.down", label: "Down", size: 36) { model.send(.down) }.offset(y: 43)
-            icon("chevron.left", label: "Left", size: 36) { model.send(.left) }.offset(x: -43)
-            icon("chevron.right", label: "Right", size: 36) { model.send(.right) }.offset(x: 43)
-            Button { model.send(.enter) } label: {
-                Text("OK").font(.system(size: 11, weight: .semibold)).frame(width: 43, height: 43)
-            }
-            .buttonStyle(RemoteButtonStyle(restingOpacity: 0.10, radius: 23))
-            .help("OK / Select").accessibilityLabel("OK / Select")
-        }
-        .frame(width: 132, height: 132)
+        RemoteDirectionPad(model: model)
     }
 
     private var volume: some View {
@@ -289,11 +291,12 @@ public struct RemotePanelView: View {
     }
 }
 
-private struct RemoteButtonStyle: ButtonStyle {
+struct RemoteButtonStyle: ButtonStyle {
     var restingOpacity: Double
     var radius: CGFloat
+    var tint: Color = .white
     func makeBody(configuration: Configuration) -> some View {
-        RemoteButtonFace(configuration: configuration, restingOpacity: restingOpacity, radius: radius)
+        RemoteButtonFace(configuration: configuration, restingOpacity: restingOpacity, radius: radius, tint: tint)
     }
 }
 
@@ -301,14 +304,19 @@ private struct RemoteButtonFace: View {
     let configuration: ButtonStyle.Configuration
     let restingOpacity: Double
     let radius: CGFloat
+    let tint: Color
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
     var body: some View {
         configuration.label
-            .foregroundStyle(.white.opacity(hovered || configuration.isPressed ? 1 : 0.76))
-            .background(.white.opacity(configuration.isPressed ? 0.22 : (hovered ? 0.12 : restingOpacity)), in: RoundedRectangle(cornerRadius: radius))
+            .foregroundStyle(.white.opacity(hovered || configuration.isPressed ? 1 : 0.86))
+            .background(tint.opacity(configuration.isPressed ? 0.25 : (hovered && isEnabled ? 0.15 : restingOpacity)), in: RoundedRectangle(cornerRadius: radius, style: .circular))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .circular).strokeBorder(tint.opacity(restingOpacity == 0 ? 0 : (hovered && isEnabled ? 0.23 : 0.10)), lineWidth: 0.7))
             .contentShape(RoundedRectangle(cornerRadius: radius))
-            .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(.easeOut(duration: 0.10), value: configuration.isPressed)
+            .opacity(isEnabled ? 1 : 0.40)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.10), value: configuration.isPressed)
             .onHover { hovered = $0 }
     }
 }

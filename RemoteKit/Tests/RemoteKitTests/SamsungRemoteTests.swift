@@ -11,6 +11,26 @@ func eventually(timeout: TimeInterval = 3, _ predicate: () -> Bool) async -> Boo
 
 final class SamsungRemoteTests: XCTestCase {
     @MainActor
+    func testExpandedCatalogueTraversesRealWebSocketWithoutDroppingOrReordering() async throws {
+        let fixture = try LocalTVFixture()
+        defer { fixture.stop() }
+        let remote = SamsungRemote(storageDirectory: fixture.directory.appendingPathComponent("client"))
+        defer { remote.disconnect() }
+        remote.connect(host: "127.0.0.1")
+        let connected = await eventually { remote.isConnected }
+        XCTAssertTrue(connected)
+        let keys = RemoteKey.allCases.filter { $0 != .power }
+        for start in stride(from: 0, to: keys.count, by: 8) {
+            let end = min(start + 8, keys.count)
+            for key in keys[start..<end] { remote.send(key) }
+            let delivered = await eventually(timeout: 5) { (try? fixture.metrics()["keyMessages"] as? Int) == end }
+            XCTAssertTrue(delivered, "Catalogue batch ending at \(end) did not arrive")
+            guard delivered else { return }
+        }
+        XCTAssertEqual(try fixture.metrics()["keys"] as? [String], keys.map(\.rawValue))
+    }
+
+    @MainActor
     func testConnectedRemoteSendsKeepaliveAndStopsItOnDisconnect() async throws {
         let fixture = try LocalTVFixture()
         defer { fixture.stop() }

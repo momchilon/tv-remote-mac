@@ -4,11 +4,11 @@ A tiny, free, open-source TV remote that lives in your Mac’s menu bar.
 Click the remote-shaped icon and the controls appear directly underneath it.
 Click again, click outside, or press Escape to close. No Dock icon, hover activation, account, ads, or subscription.
 
-**v0.2 supports Samsung only.** Requests for **any TV brand or model** are welcome—see [Request TV support](#request-tv-support).
+**v0.3 supports Samsung only.** Requests for **any TV brand or model** are welcome—see [Request TV support](#request-tv-support).
 
-[Download v0.2 for Apple silicon](https://github.com/momchilon/tv-remote-mac/releases/download/v0.2/TV-Remote-v0.2-arm64.dmg) · [All releases](https://github.com/momchilon/tv-remote-mac/releases) · [Request TV support](https://github.com/momchilon/tv-remote-mac/issues/new?template=tv-support.yml)
+[Download v0.3 for Apple silicon](https://github.com/momchilon/tv-remote-mac/releases/download/v0.3/TV-Remote-v0.3-arm64.dmg) · [All releases](https://github.com/momchilon/tv-remote-mac/releases) · [Request TV support](https://github.com/momchilon/tv-remote-mac/issues/new?template=tv-support.yml)
 
-<img src="docs/remote.png" width="300" alt="Interface preview: a minimal black remote with navigation, volume, Back, Home, input and power controls">
+<img src="docs/remote.png" width="300" alt="Compact black remote with a Full toggle, navigation, volume, Back, Home, input and power controls">
 
 ## Install
 
@@ -25,7 +25,7 @@ The app is still named **Notch Remote** internally for compatibility with early 
 
 ### Requirements and first launch
 
-- The downloadable v0.2 DMG is for **Apple silicon Macs**, with a minimum deployment target of **macOS 13**. Not every macOS version has been physically tested.
+- The downloadable v0.3 DMG is for **Apple silicon Macs**, with a minimum deployment target of **macOS 13**. Not every macOS version has been physically tested.
 - A compatible **Samsung smart TV** offering its local-network remote interface on port 8002. Support varies by model and firmware; not every Samsung TV has been tested.
 - The release is **ad-hoc signed, not Apple-notarized**. macOS may require manual approval in Privacy & Security when opening a downloaded build. You can also inspect the source and build it yourself.
 - It needs local-network access—not Accessibility, screen recording, or desktop-control permission.
@@ -40,7 +40,21 @@ The app is still named **Notch Remote** internally for compatibility with early 
 
 The gear opens connection settings. Right-click the menu-bar icon for connection settings or Quit. The app does not add itself to login items.
 
-### New in v0.2: discovery and multiple remotes
+### New in v0.3: expanded remote
+
+Click **Full** next to the gear to switch the small remote to a wider panel; **Compact** switches back.
+
+- **Remote:** circular direction pad, separate volume/channel rockers, a 0–9 keypad, previous channel, four coloured A/B/C/D keys, playback/recording and TV shortcuts.
+- **More controls:** a searchable catalogue covering TV menus, HDMI/legacy inputs, picture, sound, captions, teletext, timers, multi-view and PiP. Search by label or `KEY_…` identifier.
+- **114 mapped commands total**, including the existing confirmed power action. These are known Samsung command mappings, not a claim that every Tizen TV supports all of them. Extended and legacy controls may do nothing on a particular model/input/app.
+- Number-row/numpad keys enter channels; Page Up/Down change channel. Search/settings text fields keep their keystrokes instead of sending them to the TV.
+- The layout choice lasts while the app is running. Closing/reopening does not auto-expand the popover; short displays can scroll the full remote.
+
+<img src="docs/expanded-remote.png" width="520" alt="Expanded native remote with navigation ring, volume and channel rockers, number pad, four coloured keys, playback and TV shortcuts">
+
+See [Expanded controls and mapping notes](docs/controls.md). Factory/service commands remain excluded, and pairing/security behavior is unchanged.
+
+### Discovery and multiple remotes
 
 - **Find TVs:** open the gear, click **Find TVs**, then select a discovered Samsung TV. Its name and IP fill the form; discovery does not pair with it or send remote commands. Click **Save & Connect** when ready.
 - **Multiple remotes:** give each TV a name (for example, Living room or Bedroom). Use the TV-name menu above the controls to switch between saved TVs, or choose **Add TV** to set up another one.
@@ -51,13 +65,13 @@ Discovery uses local IPv4 SSDP and a read-only Samsung device-information reques
 
 TV names and device information discovered over HTTP are untrusted hints, not authentication. Control still uses the existing pinned TLS connection on port 8002. If discovery provides a valid MAC address, it is remembered only after a successful connection to that TV, enabling best-effort wake where supported.
 
-Updating from v0.1 preserves your existing pairing and adds that TV to the saved-remotes list. See the [v0.2 release notes](docs/releases/v0.2.md).
+Updating from v0.1 or v0.2 preserves your existing pairing. The original single-TV setup is migrated to the saved-remotes list automatically. See the [v0.3 release notes](docs/releases/v0.3.md).
 
 ## Current limits
 
-- **Samsung only in v0.2.** There is no LG, Sony, Philips, TCL, Hisense, Roku or Android/Google TV backend yet.
+- **Samsung only in v0.3.** There is no LG, Sony, Philips, TCL, Hisense, Roku or Android/Google TV backend yet.
 - Discovery requires a responsive TV on a reachable local network. If multicast is blocked or a TV is asleep, use manual IP entry.
-- No channel list, app launcher, screen mirroring, or cloud control.
+- No fetched channel directory, app-ID launcher, screen mirroring, or cloud control. The Channel list/App list buttons request the TV's own screens; they do not fetch a list into the Mac app.
 - Waking the TV is best-effort and requires a known MAC address plus working standby networking. The app can remember a MAC reported during discovery, but not every TV provides one. Turning an already-connected TV off is supported.
 - A successful WebSocket write is not an acknowledgment that the TV acted on a key. Key behavior depends on the TV and its current screen.
 
@@ -114,6 +128,14 @@ UI tests are explicitly opt-in because they create status items, render windows 
 RUN_UI_TESTS=1 swift test
 ```
 
+With permission for **offscreen previews only**, render the native views without status items, desktop clicks, or TV commands:
+
+```sh
+RUN_UI_TESTS=0 RUN_RENDER_TESTS=1 swift test --filter PanelViewTests
+```
+
+Set `REMOTE_PREVIEW_DIR` to choose where preview PNGs are saved. Full desktop interaction tests still require `RUN_UI_TESTS=1`.
+
 The optional `RemoteCheck` diagnostic authenticates against a TV without sending remote keys; it may display a TV approval prompt and stores approved credentials. See [RemoteKit](RemoteKit/README.md).
 
 ## Privacy and security
@@ -121,7 +143,7 @@ The optional `RemoteCheck` diagnostic authenticates against a TV without sending
 - Local-network control only; no telemetry, accounts or cloud service.
 - TLS on port 8002 with per-TV certificate pinning after first successful authentication. Changed certificates require explicit re-pairing. First-use trust cannot eliminate first-contact impersonation on an untrusted LAN.
 - Pairing data is stored locally in `~/Library/Application Support/Notch Remote/connections.json`, with private file permissions. Do not publish this directory.
-- Only the small remote-key allowlist is exposed. No factory-reset or service-menu commands.
+- Only the explicit consumer remote-key allowlist is exposed. No factory-reset or service-menu commands.
 
 ## Contributing and license
 

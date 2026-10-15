@@ -32,6 +32,10 @@ with tempfile.TemporaryDirectory(prefix='tv-remote-dmg-', dir=SCRATCH) as tempor
         'Use Add TV for more remotes; switch using the TV-name menu above the controls.\n'
         'Allow local-network access in macOS when prompted.\n'
         'No personal TV pairing data is included. Existing pairings are preserved on update.\n\n'
+        'Click Full for the expanded remote; Compact returns to the small layout.\n'
+        'Use More controls to search the complete catalogue by name or key code.\n'
+        'Includes numbers, colour keys, channel controls, playback and extended functions.\n'
+        'Extended/legacy keys are model-dependent; not every TV supports every key.\n\n'
         'This build is ad-hoc signed but not notarized by Apple.\n'
         'Another Mac may require manual approval in Privacy & Security before opening it.\n',
         encoding='utf-8')

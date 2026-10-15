@@ -66,11 +66,33 @@ final class MenuBarControllerTests: XCTestCase {
         let model = PanelModel()
         let controller = MenuBarController(model: model)
         defer { controller.stop() }
-        for state: PanelConnection in [.connecting, .approval, .ready, .failed("Offline"), .disconnected] {
-            model.connection = state
-            XCTAssertFalse(controller.popover.isShown)
-            XCTAssertFalse(model.expanded)
+        for fullRemote in [false, true] {
+            model.fullRemote = fullRemote
+            for state: PanelConnection in [.connecting, .approval, .ready, .failed("Offline"), .disconnected] {
+                model.connection = state
+                XCTAssertFalse(controller.popover.isShown)
+                XCTAssertFalse(model.expanded)
+            }
         }
+    }
+
+    func testFullModeResizesWithoutShowingAndSettingsRestoreTheChosenLayout() {
+        let model = PanelModel()
+        let controller = MenuBarController(model: model)
+        defer { controller.stop() }
+        model.toggleFullRemote()
+        XCTAssertEqual(controller.popover.contentSize.width, 520)
+        XCTAssertGreaterThan(controller.popover.contentSize.height, 250)
+        XCTAssertLessThanOrEqual(controller.popover.contentSize.height, 640)
+        XCTAssertFalse(controller.popover.isShown)
+        model.settings = true
+        XCTAssertEqual(controller.popover.contentSize.width, 300)
+        model.settings = false
+        XCTAssertEqual(controller.popover.contentSize.width, 520)
+        model.toggleFullRemote()
+        XCTAssertEqual(controller.popover.contentSize.width, 300)
+        XCTAssertEqual(controller.popover.contentSize.height, 250)
+        XCTAssertFalse(controller.popover.isShown)
     }
 
     func testClosingClearsTransientUIStateWithoutLosingTVSettings() {

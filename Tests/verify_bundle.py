@@ -27,7 +27,7 @@ class BundleTests(unittest.TestCase):
             p = plistlib.load(stream)
         self.assertEqual(p['CFBundleIdentifier'], 'local.notchremote.app')
         self.assertEqual(p['CFBundleShortVersionString'], (ROOT / 'VERSION').read_text().strip())
-        self.assertEqual(p['CFBundleVersion'], '2')
+        self.assertEqual(p['CFBundleVersion'], '3')
         self.assertEqual(p['LSMinimumSystemVersion'], '13.0')
         self.assertIs(p['LSUIElement'], True)
         self.assertEqual(p['CFBundleExecutable'], 'NotchRemote')

@@ -25,7 +25,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         let viewController = NSViewController()
         viewController.view = hosting
         popover.contentViewController = viewController
-        resize(settings: model.settings)
+        resize(settings: model.settings, fullRemote: model.fullRemote)
 
         if let button = statusItem.button {
             let image = NSImage(systemSymbolName: Self.iconSymbol, accessibilityDescription: "TV remote")?
@@ -37,7 +37,9 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
             button.action = #selector(iconClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        model.$settings.dropFirst().sink { [weak self] settings in self?.resize(settings: settings) }
+        model.$settings.combineLatest(model.$fullRemote).dropFirst().sink { [weak self] settings, fullRemote in
+            self?.resize(settings: settings, fullRemote: fullRemote)
+        }
             .store(in: &subscriptions)
         model.$expanded.dropFirst().sink { [weak self] expanded in
             guard let self, !expanded, self.popover.isShown else { return }
@@ -47,7 +49,10 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
             guard let self, self.popover.isShown,
                   event.window === self.popover.contentViewController?.view.window,
                   event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return event }
-            return self.handleKey(event.keyCode) ? nil : event
+            // Text entry (including control search) must never also send TV keys.
+            let editingText = (event.window?.firstResponder as? NSTextView)?.isEditable == true
+            if event.keyCode == 53 { self.popover.performClose(nil); return nil }
+            return self.model.handleKey(event.keyCode, editingText: editingText) ? nil : event
         }
     }
 
@@ -61,7 +66,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         model.expanded = true
         model.settings = settings
         model.confirmingPower = false
-        resize(settings: settings)
+        resize(settings: settings, fullRemote: model.fullRemote)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
     }
@@ -76,8 +81,10 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 
-    private func resize(settings: Bool) {
-        let size = NSSize(width: 300, height: PanelModel.height(settings: settings))
+    private func resize(settings: Bool, fullRemote: Bool) {
+        let availableHeight = (statusItem.button?.window?.screen ?? NSScreen.main)?.visibleFrame.height ?? 900
+        let size = NSSize(width: PanelModel.width(settings: settings, fullRemote: fullRemote),
+                          height: min(PanelModel.height(settings: settings, fullRemote: fullRemote), max(250, availableHeight - 40)))
         popover.contentViewController?.view.setFrameSize(size)
         popover.contentSize = size
     }
@@ -101,24 +108,4 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
     @objc private func openSettings() { open(settings: true) }
     @objc private func quit() { model.onQuit?() }
 
-    private func handleKey(_ code: UInt16) -> Bool {
-        if code == 53 { popover.performClose(nil); return true }
-        guard !model.settings, !model.confirmingPower, model.ready else { return false }
-        let command: PanelCommand?
-        switch code {
-        case 126: command = .up
-        case 125: command = .down
-        case 123: command = .left
-        case 124: command = .right
-        case 36, 76: command = .enter
-        case 51: command = .back
-        case 24: command = .volumeUp
-        case 27: command = .volumeDown
-        case 46: command = .mute
-        default: command = nil
-        }
-        guard let command else { return false }
-        model.send(command)
-        return true
-    }
 }

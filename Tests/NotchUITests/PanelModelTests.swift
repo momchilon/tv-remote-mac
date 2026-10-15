@@ -191,6 +191,25 @@ final class PanelModelTests: XCTestCase {
         XCTAssertEqual(model.panelHeight, 250)
     }
 
+    func testEveryMappedConsumerCommandCanReachAuthenticatedTV() throws {
+        let model = PanelModel()
+        var sent: [PanelCommand] = []
+        model.onCommand = { sent.append($0) }
+        XCTAssertEqual(PanelCommand.allCases.count, 114)
+        for raw in ["KEY_0", "KEY_9", "KEY_CHUP", "KEY_CHDOWN", "KEY_RED", "KEY_GREEN", "KEY_YELLOW", "KEY_BLUE", "KEY_PLAY", "KEY_PAUSE", "KEY_GUIDE", "KEY_HDMI4", "KEY_MULTI_VIEW", "KEY_CAPTION"] {
+            XCTAssertNotNil(PanelCommand(rawValue: raw), raw)
+        }
+        for state: PanelConnection in [.disconnected, .connecting, .approval, .failed("Offline")] {
+            model.connection = state
+            PanelCommand.allCases.forEach(model.send)
+            XCTAssertTrue(sent.isEmpty)
+        }
+        model.connection = .ready
+        PanelCommand.allCases.forEach(model.send)
+        XCTAssertEqual(sent, PanelCommand.allCases.filter { $0 != .power })
+        XCTAssertFalse(model.confirmingPower)
+    }
+
     func testRemoteCannotSendAnythingUntilAuthenticated() {
         let model = PanelModel()
         var sent: [PanelCommand] = []
