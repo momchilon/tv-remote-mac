@@ -21,7 +21,7 @@ final class PanelViewTests: XCTestCase {
         let model = PanelModel()
         model.host = "192.168.1.100"
         model.showSettings()
-        try render(model, name: "settings", height: 292)
+        try render(model, name: "settings", height: 480)
     }
 
     func testOfflineAndApprovalStatesRender() throws {

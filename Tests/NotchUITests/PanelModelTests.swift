@@ -3,6 +3,194 @@ import XCTest
 
 @MainActor
 final class PanelModelTests: XCTestCase {
+    func testDiscoveryListsTVsWithoutConnectingAndSelectionOnlyFillsAddress() async {
+        let model = PanelModel()
+        let tv = PanelTV(host: "192.168.1.20", name: "Living room", model: "Samsung QLED")
+        var connections = 0
+        model.onConnect = { _ in connections += 1 }
+        model.onDiscover = { [tv] }
+        model.showSettings()
+        model.findTVs()
+        XCTAssertTrue(model.discovering)
+        for _ in 0..<100 where model.discovering { await Task.yield() }
+        XCTAssertFalse(model.discovering)
+        XCTAssertEqual(model.discoveredTVs, [tv])
+        model.selectTV(tv)
+        XCTAssertEqual(model.host, tv.host)
+        XCTAssertTrue(model.settings)
+        XCTAssertEqual(connections, 0)
+        XCTAssertEqual(model.connection, .disconnected)
+    }
+
+    func testClosingCancelsDiscoveryAndIgnoresLateResults() async {
+        let model = PanelModel()
+        var finish: CheckedContinuation<[PanelTV], Never>?
+        model.onDiscover = { await withCheckedContinuation { finish = $0 } }
+        model.showSettings()
+        model.findTVs()
+        while finish == nil { await Task.yield() }
+        model.close()
+        XCTAssertFalse(model.discovering)
+        finish?.resume(returning: [PanelTV(host: "192.168.1.21", name: "Late TV", model: "TV")])
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(model.discoveredTVs.isEmpty)
+        XCTAssertFalse(model.expanded)
+    }
+
+    func testSwitchingSavedRemoteConnectsOnlyChosenHost() {
+        let model = PanelModel()
+        let remote = SavedRemote(host: "192.168.1.22", name: "Bedroom")
+        var hosts: [String] = []
+        model.onConnect = { hosts.append($0) }
+        model.selectRemote(remote)
+        XCTAssertEqual(model.host, remote.host)
+        XCTAssertEqual(model.remoteName, "Bedroom")
+        XCTAssertEqual(hosts, [remote.host])
+        XCTAssertEqual(model.connection, .connecting)
+    }
+
+    func testAddingRemoteLeavesSavedRemotesAndConnectionUntouched() {
+        let model = PanelModel()
+        model.savedRemotes = [SavedRemote(host: "192.168.1.22", name: "Bedroom")]
+        model.host = "192.168.1.22"
+        model.remoteName = "Bedroom"
+        model.connection = .ready
+        model.addRemote()
+        XCTAssertTrue(model.settings)
+        XCTAssertEqual(model.host, "")
+        XCTAssertEqual(model.remoteName, "")
+        XCTAssertEqual(model.savedRemotes.count, 1)
+        XCTAssertEqual(model.connection, .ready)
+    }
+
+    func testEditingThenLeavingSettingsRestoresActiveRemoteWithoutConnecting() {
+        let model = PanelModel()
+        let active = SavedRemote(host: "192.168.1.20", name: "Living room")
+        let other = SavedRemote(host: "192.168.1.21", name: "Bedroom")
+        model.savedRemotes = [active, other]
+        model.selectedRemoteHost = active.host
+        var connections = 0
+        model.onConnect = { _ in connections += 1 }
+        model.editRemote(other)
+        XCTAssertEqual(model.host, other.host)
+        XCTAssertEqual(model.remoteName, other.name)
+        XCTAssertTrue(model.settings)
+        XCTAssertEqual(model.activeRemoteName, active.name)
+        model.leaveSettings()
+        XCTAssertFalse(model.settings)
+        XCTAssertEqual(model.host, active.host)
+        XCTAssertEqual(model.remoteName, active.name)
+        XCTAssertEqual(connections, 0)
+    }
+
+    func testInvalidAddressCannotConnectOrForgetAnotherTV() {
+        let model = PanelModel()
+        var connections = 0
+        var forgets = 0
+        model.onConnect = { _ in connections += 1 }
+        model.onForget = { forgets += 1 }
+        model.showSettings()
+        for host in ["hello", "192.168.1.300", "http://192.168.1.20/", "127.0.0.1"] {
+            model.host = host
+            model.connect()
+            model.repairTV()
+            XCTAssertTrue(model.settings)
+        }
+        XCTAssertEqual(connections, 0)
+        XCTAssertEqual(forgets, 0)
+        XCTAssertEqual(model.connection, .disconnected)
+    }
+
+    func testClosingUnsavedSetupWithoutSelectedRemoteDiscardsDraftBeforeReconnect() {
+        let model = PanelModel()
+        var hosts: [String] = []
+        model.onConnect = { hosts.append($0) }
+        model.addRemote()
+        model.host = "192.168.1.21"
+        model.remoteName = "Unsaved TV"
+
+        model.close()
+
+        XCTAssertFalse(model.settings)
+        XCTAssertFalse(model.expanded)
+        XCTAssertEqual(model.host, "")
+        XCTAssertEqual(model.remoteName, "")
+        XCTAssertTrue(model.savedRemotes.isEmpty)
+        XCTAssertEqual(model.selectedRemoteHost, "")
+        XCTAssertTrue(hosts.isEmpty)
+        model.connect()
+        XCTAssertTrue(hosts.isEmpty)
+        XCTAssertEqual(model.connection, .disconnected)
+    }
+
+    func testClosingDraftAfterLastSavedRemoteIsRemovedDiscardsDraftBeforeReconnect() {
+        let model = PanelModel()
+        let active = SavedRemote(host: "192.168.1.20", name: "Living room")
+        model.savedRemotes = [active]
+        model.selectedRemoteHost = active.host
+        model.host = active.host
+        model.remoteName = active.name
+        var hosts: [String] = []
+        model.onConnect = { hosts.append($0) }
+        model.addRemote()
+        model.host = "192.168.1.21"
+        model.remoteName = "Unsaved TV"
+        model.savedRemotes = []
+        model.selectedRemoteHost = ""
+
+        model.close()
+
+        XCTAssertFalse(model.settings)
+        XCTAssertFalse(model.expanded)
+        XCTAssertEqual(model.host, "")
+        XCTAssertEqual(model.remoteName, "")
+        XCTAssertTrue(model.savedRemotes.isEmpty)
+        XCTAssertEqual(model.selectedRemoteHost, "")
+        XCTAssertTrue(hosts.isEmpty)
+        model.connect()
+        XCTAssertTrue(hosts.isEmpty)
+        XCTAssertEqual(model.connection, .disconnected)
+    }
+
+    func testClosingAnUnsavedDraftRestoresActiveRemoteForReconnect() {
+        let model = PanelModel()
+        let active = SavedRemote(host: "192.168.1.20", name: "Living room")
+        model.savedRemotes = [active]
+        model.selectedRemoteHost = active.host
+        model.host = active.host
+        model.addRemote()
+        model.host = "192.168.1.21"
+        model.close()
+        XCTAssertEqual(model.host, active.host)
+        XCTAssertEqual(model.remoteName, active.name)
+    }
+
+    func testStoppingSearchAllowsRetryWithoutOldResultsOverwritingIt() async {
+        let model = PanelModel()
+        var finishOld: CheckedContinuation<[PanelTV], Never>?
+        model.onDiscover = { await withCheckedContinuation { finishOld = $0 } }
+        model.findTVs()
+        while finishOld == nil { await Task.yield() }
+        model.cancelDiscovery()
+        XCTAssertFalse(model.discoveryNotice.contains("Searching"))
+        let current = PanelTV(host: "192.168.1.25", name: "New", model: "TV")
+        model.onDiscover = { [current] }
+        model.findTVs()
+        for _ in 0..<100 where model.discovering { await Task.yield() }
+        finishOld?.resume(returning: [PanelTV(host: "192.168.1.26", name: "Old", model: "TV")])
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(model.discoveredTVs, [current])
+    }
+
+    func testSettingsHaveRoomForDiscoveryAndSavedRemotes() {
+        let model = PanelModel()
+        XCTAssertEqual(model.panelHeight, 250)
+        model.showSettings()
+        XCTAssertEqual(model.panelHeight, 480)
+        model.close()
+        XCTAssertEqual(model.panelHeight, 250)
+    }
+
     func testRemoteCannotSendAnythingUntilAuthenticated() {
         let model = PanelModel()
         var sent: [PanelCommand] = []

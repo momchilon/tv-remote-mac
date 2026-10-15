@@ -39,12 +39,25 @@ The app is still named **Notch Remote** internally for compatibility with early 
 
 The gear opens connection settings. Right-click the menu-bar icon for connection settings or Quit. The app does not add itself to login items.
 
+### New in source builds (unreleased)
+
+- **Find TVs:** open the gear, click **Find TVs**, then select a discovered Samsung TV. Its name and IP fill the form; discovery does not pair with it or send remote commands. Click **Save & Connect** when ready.
+- **Multiple remotes:** give each TV a name (for example, Living room or Bedroom). Use the TV-name menu above the controls to switch between saved TVs, or choose **Add TV** to set up another one.
+- **Edit/remove:** click a saved TV in settings to edit its name; **Save & Connect** saves the change. The play button connects immediately. The row's menu removes the saved remote without deleting its pairing credentials; **Re-pair TV** explicitly clears pairing for the IP in the form.
+- Saved remotes and the selected TV survive restarting the app. An existing single-TV setup is migrated automatically. Pairing remains separate for each IP address.
+
+Discovery uses local IPv4 SSDP and a read-only Samsung device-information request on port 8001. Turn the TV on and allow local-network access in macOS. Guest Wi-Fi isolation, VPN routing, or blocked multicast can prevent discovery; manual IP entry remains available. Discovery does not sweep your subnet. Unsupported devices are not shown, and discovering a TV does not guarantee it supports every remote command.
+
+TV names and device information discovered over HTTP are untrusted hints, not authentication. Control still uses the existing pinned TLS connection on port 8002. If discovery provides a valid MAC address, it is remembered only after a successful connection to that TV, enabling best-effort wake where supported.
+
+These features are not included in the downloadable v0.1 release above; build from source to try them.
+
 ## Current limits
 
 - **Samsung only in v0.1.** There is no LG, Sony, Philips, TCL, Hisense, Roku or Android/Google TV backend yet.
-- Manual IP entry; no automatic device discovery.
+- The v0.1 download requires manual IP entry. Source builds also offer the **Find TVs** scan described above.
 - No channel list, app launcher, screen mirroring, or cloud control.
-- Waking the TV is best-effort and requires a known MAC address plus working standby networking. The public UI does not yet offer automatic MAC discovery or a MAC-entry field, so wake is not available for every fresh setup. Turning an already-connected TV off is supported.
+- Waking the TV is best-effort and requires a known MAC address plus working standby networking. The v0.1 download has no automatic MAC discovery or MAC-entry field. Source builds can remember a MAC reported during discovery, but not every TV provides one. Turning an already-connected TV off is supported.
 - A successful WebSocket write is not an acknowledgment that the TV acted on a key. Key behavior depends on the TV and its current screen.
 
 ## Request TV support

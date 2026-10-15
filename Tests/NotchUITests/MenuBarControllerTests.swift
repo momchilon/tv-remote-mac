@@ -56,7 +56,7 @@ final class MenuBarControllerTests: XCTestCase {
         let controller = MenuBarController(model: model)
         defer { controller.stop() }
         model.settings = true
-        XCTAssertEqual(controller.popover.contentSize.height, 292)
+        XCTAssertEqual(controller.popover.contentSize.height, 480)
         XCTAssertFalse(controller.popover.isShown)
         model.settings = false
         XCTAssertEqual(controller.popover.contentSize.height, 250)
@@ -75,7 +75,10 @@ final class MenuBarControllerTests: XCTestCase {
 
     func testClosingClearsTransientUIStateWithoutLosingTVSettings() {
         let model = PanelModel()
-        model.host = "192.168.1.100"
+        let active = SavedRemote(host: "192.168.1.100", name: "Living room")
+        model.savedRemotes = [active]
+        model.selectedRemoteHost = active.host
+        model.host = active.host
         model.connection = .ready
         let controller = MenuBarController(model: model)
         defer { controller.stop() }

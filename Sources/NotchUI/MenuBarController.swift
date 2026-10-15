@@ -77,7 +77,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     private func resize(settings: Bool) {
-        let size = NSSize(width: 300, height: settings ? 292 : 250)
+        let size = NSSize(width: 300, height: PanelModel.height(settings: settings))
         popover.contentViewController?.view.setFrameSize(size)
         popover.contentSize = size
     }

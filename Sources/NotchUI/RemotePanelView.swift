@@ -35,7 +35,20 @@ public struct RemotePanelView: View {
             HStack(spacing: 7) {
                 Circle().fill(statusColor).frame(width: 5, height: 5)
                     .accessibilityLabel(model.ready ? "Connected" : "Not connected")
-                Text("Samsung").font(.system(size: 12, weight: .medium))
+                Menu {
+                    ForEach(model.savedRemotes) { remote in
+                        Button { model.selectRemote(remote) } label: {
+                            Label(remote.displayLabel, systemImage: remote.host == model.selectedRemoteHost ? "checkmark" : "tv")
+                        }
+                    }
+                    if !model.savedRemotes.isEmpty { Divider() }
+                    Button("Add TV…") { model.addRemote() }
+                } label: {
+                    Text(model.activeRemoteName).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("Switch remote")
                 Spacer()
                 icon("gearshape", label: "Connection settings", size: 27) { model.showSettings() }
                 icon("power", label: model.ready ? "Turn off TV" : "Wake TV", size: 27) { model.requestPower() }
@@ -115,29 +128,78 @@ public struct RemotePanelView: View {
     }
 
     private var settings: some View {
-        VStack(alignment: .leading, spacing: 13) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                icon("chevron.left", label: "Back to remote", size: 24) { model.settings = false }
-                Text("Connection").font(.system(size: 12, weight: .medium))
+                icon("chevron.left", label: "Back to remote", size: 24) { model.leaveSettings() }
+                Text("Your remotes").font(.system(size: 12, weight: .medium))
                 Spacer()
+                Button("Add TV") { model.addRemote() }
+                    .buttonStyle(.plain).font(.system(size: 11))
             }
-            Text("TV IP address").font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
-            TextField("192.168.1.100", text: $model.host)
-                .textFieldStyle(.plain).font(.system(size: 14, design: .monospaced))
-                .padding(11).background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
-                .accessibilityLabel("TV IP address")
-                .onSubmit { model.connect() }
-            Text(model.notice.isEmpty ? "Same network. Approve this Mac on your TV if asked." : model.notice)
-                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-                .fixedSize(horizontal: false, vertical: true)
-            Button { model.connect() } label: {
-                Text("Connect").font(.system(size: 12, weight: .semibold)).frame(maxWidth: .infinity).padding(.vertical, 10)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if !model.savedRemotes.isEmpty { savedRemotes }
+                    HStack {
+                        Text("Nearby TVs").font(.system(size: 11, weight: .medium))
+                        Spacer()
+                        if model.discovering {
+                            ProgressView().controlSize(.mini)
+                            Button("Stop") { model.cancelDiscovery() }
+                                .buttonStyle(.plain).font(.system(size: 11))
+                        } else {
+                            Button("Find TVs") { model.findTVs() }
+                                .buttonStyle(.plain).font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    Text(model.discoveryNotice)
+                        .font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                    ForEach(model.discoveredTVs) { tv in
+                        Button { model.selectTV(tv) } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "tv").frame(width: 18)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(tv.name).font(.system(size: 11, weight: .medium)).lineLimit(1)
+                                    Text([tv.model, tv.host].filter { !$0.isEmpty }.joined(separator: " · "))
+                                        .font(.system(size: 9)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                                }
+                                Spacer(minLength: 0)
+                                if model.host == tv.host { Image(systemName: "checkmark").font(.system(size: 10)) }
+                            }.padding(9).frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(RemoteButtonStyle(restingOpacity: 0.06, radius: 8))
+                        .accessibilityLabel("Select \(tv.name), \(tv.host)")
+                    }
+                    Divider().overlay(.white.opacity(0.12))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Remote name").font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+                        TextField("Living room", text: $model.remoteName)
+                            .textFieldStyle(.plain).font(.system(size: 12))
+                            .padding(10).background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+                            .accessibilityLabel("Remote name")
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("TV IP address").font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+                        TextField("192.168.1.100", text: $model.host)
+                            .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced))
+                            .padding(10).background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+                            .accessibilityLabel("TV IP address")
+                            .onSubmit { model.connect() }
+                    }
+                    Text(model.notice.isEmpty ? "Same network. Approve this Mac on your TV if asked." : model.notice)
+                        .font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button { model.connect() } label: {
+                        Text("Save & Connect").font(.system(size: 12, weight: .semibold))
+                            .frame(maxWidth: .infinity).padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain).foregroundStyle(.black)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 9))
+                }
+                .padding(.vertical, 1)
             }
-            .buttonStyle(.plain).foregroundStyle(.black)
-            .background(.white, in: RoundedRectangle(cornerRadius: 9))
-            Spacer(minLength: 0)
             HStack {
-                Button("Re-pair TV") { model.onForget?(); model.connect() }
+                Button("Re-pair TV") { model.repairTV() }
                     .disabled(model.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Spacer()
                 Button("Quit") { model.onQuit?() }
@@ -145,6 +207,42 @@ public struct RemotePanelView: View {
             .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4))
         }
         .padding(20)
+    }
+
+    private var savedRemotes: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Saved TVs").font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+            ForEach(model.savedRemotes) { remote in
+                HStack(spacing: 5) {
+                    Button { model.editRemote(remote) } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: remote.host == model.selectedRemoteHost ? "tv.fill" : "tv")
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(remote.name).lineLimit(1)
+                                if remote.name != remote.host {
+                                    Text(remote.host).font(.system(size: 9)).foregroundStyle(.white.opacity(0.5))
+                                }
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit \(remote.displayLabel)")
+                    .accessibilityLabel("Edit \(remote.displayLabel)")
+                    Button { model.selectRemote(remote) } label: { Image(systemName: "play.fill") }
+                        .buttonStyle(.plain).help("Connect to \(remote.displayLabel)")
+                        .accessibilityLabel("Connect to \(remote.displayLabel)")
+                    Menu {
+                        Button("Remove saved remote", role: .destructive) { model.onRemoveRemote?(remote.host) }
+                    } label: { Image(systemName: "ellipsis") }
+                    .menuStyle(.borderlessButton).fixedSize()
+                    .accessibilityLabel("Manage \(remote.displayLabel)")
+                }
+                .font(.system(size: 11)).padding(8)
+                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            }
+            Divider().overlay(.white.opacity(0.12)).padding(.top, 4)
+        }
     }
 
     private var powerConfirmation: some View {

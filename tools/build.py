@@ -33,7 +33,7 @@ info = {
     'LSMultipleInstancesProhibited': True,
     'NSHighResolutionCapable': True,
     'NSPrincipalClass': 'NSApplication',
-    'NSLocalNetworkUsageDescription': 'Connect directly to your Samsung TV on your local network.',
+    'NSLocalNetworkUsageDescription': 'Find Samsung TVs and connect to your saved remotes on your local network.',
     'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True},
 }
 resources = app / 'Contents' / 'Resources'
